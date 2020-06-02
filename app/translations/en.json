@@ -1,0 +1,8 @@
+{
+  "app.components.LanguageSwitcher.enGB": "🇬🇧 UK English (en-GB)",
+  "app.components.LanguageSwitcher.enUS": "🇺🇸 US English (en-US)",
+  "app.containers.Counter.header": "Click the buttons to change the count.",
+  "app.containers.Example.header": "This is the Example container!",
+  "app.containers.HomePage.header": "This is the HomePage container!",
+  "app.containers.NotFoundPage.header": "This is the NotFoundPage container!"
+}

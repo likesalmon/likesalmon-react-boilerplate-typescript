@@ -1,0 +1,258 @@
+/*
+ *
+ * {{ properCase name }}
+ *
+ */
+
+{{#if memo}}
+import React, { memo } from 'react';
+{{else}}
+import React from 'react';
+{{/if}}
+{{#if wantHeaders}}
+import { Helmet } from 'react-helmet-async';
+{{/if}}
+import { useSelector, useDispatch } from 'react-redux';
+import { createSelector, createStructuredSelector, Selector } from 'reselect';
+import { take, put } from 'redux-saga/effects';
+{{#if wantSaga}}
+import { useInjectReducer, useInjectSaga } from 'redux-injectors';
+{{else}}
+import { useInjectReducer } from 'redux-injectors';
+{{/if}}
+import styled from 'styles/styled-components';
+{{#if wantMessages}}
+import { FormattedMessage } from 'react-intl';
+import messages from './messages';
+{{/if}}
+import { add, subtract, prop } from 'ramda';
+import { notMyAction } from 'utils/utils';
+
+/**
+ * ############################################################################
+ *
+ * Constants
+ *
+ * ############################################################################
+ */
+export enum Constants {
+  NAMESPACE = 'containers/{{ properCase name }}',
+}
+
+/**
+ * ############################################################################
+ *
+ * Actions
+ *
+ * ############################################################################
+ */
+export enum ActionTypes {
+  INCREMENT = 'containers/{{ properCase name }}/INCREMENT',
+  DECREMENT = 'containers/{{ properCase name }}/DECREMENT',
+  {{#if wantSaga}}
+  INCREMENT_TOTAL_CLICKS = 'containers/{{ properCase name }}/INCREMENT_TOTAL_CLICKS',
+  {{/if}}
+}
+
+interface Increment {
+  type: ActionTypes.INCREMENT;
+}
+export const increment = (): Increment => ({ type: ActionTypes.INCREMENT });
+
+interface Decrement {
+  type: ActionTypes.DECREMENT;
+}
+export const decrement = (): Decrement => ({ type: ActionTypes.DECREMENT });
+
+{{#if wantSaga}}
+interface IncrementTotal {
+  type: ActionTypes.INCREMENT_TOTAL_CLICKS;
+}
+export const incrementTotalClicks = (): IncrementTotal => ({
+  type: ActionTypes.INCREMENT_TOTAL_CLICKS,
+});
+
+type Action = Increment | Decrement | IncrementTotal;
+{{else}}
+type Action = Increment | Decrement;
+{{/if}}
+
+/**
+ * ############################################################################
+ *
+ * Reducer
+ *
+ * ############################################################################
+ */
+// ContainerState is used by app/types/type.ts to define this slice
+// of ApplicationRootState
+export interface ContainerState {
+  readonly count: number;
+  {{#if wantSaga}}
+  readonly totalClicks: number;
+  {{/if}}
+}
+const initialState: ContainerState = {
+  count: 0,
+  {{#if wantSaga}}
+  totalClicks: 0,
+  {{/if}}
+};
+
+/**
+ * Generate a random integer from 0 to max.
+ */
+export const reducer = (
+  state: ContainerState = initialState,
+  action: Action,
+): ContainerState => {
+  // Return the state if this is not an action from this container
+  if (notMyAction(ActionTypes, action.type)) return state;
+
+  switch (action.type) {
+    case ActionTypes.INCREMENT:
+      return { ...state, count: add(state.count, 1) };
+    case ActionTypes.DECREMENT:
+      return { ...state, count: subtract(state.count, 1) };
+    {{#if wantSaga}}
+    case ActionTypes.INCREMENT_TOTAL_CLICKS:
+      return { ...state, totalClicks: add(state.totalClicks, 1) };
+    {{/if}}
+    // No default
+  }
+};
+
+{{#if wantSaga}}
+/**
+ * ############################################################################
+ *
+ * Sagas
+ *
+ * ############################################################################
+ */
+export function* saga() {
+  /* eslint-disable no-constant-condition */
+  while (true) {
+    // Watch for either action
+    yield take([ActionTypes.INCREMENT, ActionTypes.DECREMENT]);
+    // Dispatch
+    yield put(incrementTotalClicks());
+  }
+}
+{{/if}}
+/**
+ * ############################################################################
+ *
+ * Selectors
+ *
+ * ############################################################################
+ */
+// State represents the application state
+export interface State {
+  [Constants.NAMESPACE]: ContainerState;
+  [x: string]: any;
+}
+// Arguments to createSelector must be of type Selector<input, results>
+const selectDomain: Selector<State, ContainerState> = prop(Constants.NAMESPACE);
+export const makeSelectCount = createSelector(
+  [selectDomain],
+  prop('count') as Selector<ContainerState, number>,
+);
+{{#if wantSaga}}
+export const makeSelectTotalClicks = createSelector(
+  [selectDomain],
+  prop('totalClicks') as Selector<ContainerState, number>,
+);
+{{/if}}
+// Combine selectors into an object that can be used by the main component
+// with `useSelector`
+const stateSelector = createStructuredSelector({
+  count: makeSelectCount,
+  {{#if wantSaga}}
+  totalClicks: makeSelectTotalClicks,
+  {{/if}}
+});
+
+/**
+ * ############################################################################
+ *
+ * Components
+ *
+ * ############################################################################
+ */
+const Bigger = styled.span`
+  font-size: 1.5em;
+  margin: 0 10px;
+`;
+
+interface Props {
+  title: string;
+}
+
+const {{ properCase name }} = (props: Props) => {
+  const dispatch = useDispatch();
+  useInjectReducer({ key: Constants.NAMESPACE, reducer: reducer });
+  {{#if wantSaga}}
+  useInjectSaga({ key: Constants.NAMESPACE, saga });
+  const { count, totalClicks } = useSelector(stateSelector);
+  {{else}}
+  const { count } = useSelector(stateSelector);
+  {{/if}}
+  const { title } = props;
+
+  return (
+    <div>
+      {{#if wantHeaders}}
+      <Helmet>
+        <title>{{properCase name}}</title>
+        <meta
+          name="description"
+          content="Description of {{ properCase name }}"
+        />
+      </Helmet>
+      {{/if}}
+      <h2>{title}</h2>
+      <h3>
+        {{#if wantMessages}}
+        <FormattedMessage {...messages.description} />
+        {{else}}
+        This is the {{ properCase name }} container!
+        {{/if}}
+      </h3>
+      <p>
+        {{#if wantMessages}}
+        <FormattedMessage {...messages.instructions} />
+        {{else}}
+        Click the buttons to change the count.
+        {{/if}}
+      </p>
+      <button type="button" onClick={() => dispatch(increment())}>
+        +
+      </button>
+      <Bigger>{count as number}</Bigger>
+      <button type="button" onClick={() => dispatch(decrement())}>
+        -
+      </button>
+      {{#if wantSaga}}
+      <p>
+        {{#if wantMessages}}
+        <FormattedMessage {...messages.totalClicks} />: {totalClicks}
+        {{else}}
+        Total clicks: {totalClicks}
+        {{/if}}
+      </p>
+      {{/if}}
+    </div>
+  );
+};
+
+{{#if memo}}
+export default memo({{ properCase name }});
+{{else}}
+export default {{ properCase name }};
+{{/if}}
+
+
+
+
+
